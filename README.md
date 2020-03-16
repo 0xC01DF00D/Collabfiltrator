@@ -8,7 +8,7 @@ Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
 #### Requirements:
 - Burp Suite Professional 1.7.x or Later
-- Jython 2.7.1
+- <a href="http://search.maven.org/remotecontent?filepath=org/python/jython-standalone/2.7.1/jython-standalone-2.7.1.jar">Jython 2.7.1</a>
 
 #### Installation Instructions
 [Installation in Burp Suite](https://github.com/0xC01DF00D/Collabfiltrator/wiki/Installation-in-Burp-Suite)
