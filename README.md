@@ -18,3 +18,9 @@ Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 Select a platform from the dropdown menu, enter the desired command, and press `Execute`. A payload will be generated for the platform you choose. Select `Copy Payload to Clipboard`, run the generated payload on your target, and wait for results to appear in the output window
 
 <img src="https://i.imgur.com/QTXupaP.png">
+
+If you liked this plugin, please consider donating to me:
+BTC: 1GvMN6AAQ9WgGZpAX4SFVTi2xU7LgCXAh2
+ETH: 0x847487DBcC6eC9b681a736BE763aca3cB8Debe49
+Paypal: paypal.me/logueadam
+
