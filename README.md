@@ -10,8 +10,9 @@ Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 - Burp Suite Professional 1.7.x or Later
 - <a href="https://www.jython.org/download.html">Jython 2.7.1</a>
 
-#### Installation Instructions
+#### Support:
 [Installation in Burp Suite Professional](https://github.com/0xC01DF00D/Collabfiltrator/wiki/Installation-in-Burp-Suite-Professional)
+[Blog Post](https://www.adamlogue.com/turning-blind-rce-into-good-rce-via-dns-exfiltration-using-collabfiltrator-burp-plugin/)
 
 #### Currently Supported Platforms:
 
