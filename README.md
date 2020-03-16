@@ -4,7 +4,7 @@ Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 #### Authors:
 - <a href="https://twitter.com/adam_logue">Adam Logue</a>
 - <a href="https://twitter.com/jared_mclaren">Jared McLaren</a>
-- Frank Scarpella
+- <a href="https://twitter.com/ninjastyle82">Frank Scarpella</a>
 
 #### Requirements:
 - Burp Suite 1.7.x or Later
