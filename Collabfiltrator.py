@@ -58,8 +58,8 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         
         # Now add content to the first tab's GUI objects
         self.osComboBox = swing.JComboBox(["Windows", "Linux"])
-        self.commandTxt = swing.JTextField("ls -lah", 35)
-        #self.commandTxt = swing.JTextField("dir c:\inetpub\wwwroot", 35)
+        #self.commandTxt = swing.JTextField("ls -lah", 35)
+        self.commandTxt = swing.JTextField("dir C:\inetpub\wwwroot", 35)
         self.payloadTxt = swing.JTextArea(10,50)
         self.payloadTxt.setBackground(Color.lightGray)
         self.payloadTxt.setEditable(False)# So you can't messup the generated payload
