@@ -1,6 +1,11 @@
 # Collabfiltrator
 Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
+#### Authors:
+- Adam Logue
+- Jared McLaren
+- Frank Scarpella
+
 #### Requirements:
 - Burp Suite 1.7.x or Later
 - Jython 2.7.1
@@ -19,7 +24,7 @@ Select a platform from the dropdown menu, enter the desired command, and press `
 
 <img src="https://i.imgur.com/QTXupaP.png">
 
-If you liked this plugin, please consider donating to me:
+If you liked this plugin, please consider donating:
 ```
 BTC: 1GvMN6AAQ9WgGZpAX4SFVTi2xU7LgCXAh2
 ETH: 0x847487DBcC6eC9b681a736BE763aca3cB8Debe49
