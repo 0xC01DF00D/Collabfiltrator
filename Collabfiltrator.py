@@ -209,6 +209,7 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
 
         output = showOutput(DNSrecordDict)
         self.outputTxt.append(output + "\n") #print output to payload box
+        print('='*80 + '\n' + 'Command: ' + str(self.commandTxt.getText()) + '\n' + output + '\n' + '='*80)
         self.outputTxt.setCaretPosition(self.outputTxt.getDocument().getLength()) # make sure scrollbar is pointing to bottom
         self.payloadTxt.setText("") #clear out payload box because listener has stopped     
         return
