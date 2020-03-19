@@ -217,11 +217,12 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
 
 def showOutput(outputDict):
     completedInputString = ""
-    for k,v in outputDict.items():
-        if "E-F" in v:
-            for chunk in (sorted(outputDict.items())): #Sort by preamble number to put data in order 
-                completedInputString += chunk[1] # DNSrecordDict.items() returns a tuple so take value from the dict and append it to completedInputString.
-    output = completedInputString[:-3].replace('-','=').replace('_','+') # drop EOF marker and replace any - padding with = and fix _s
+    for k,v in sorted(outputDict.items()):
+      try:
+          int(k)  # skip if failed
+          completedInputString += v
+      except: continue
+    output = completedInputString.replace('E-F','').replace('-','=').replace('_','+') # drop EOF marker and replace any - padding with = and fix _s
     try:
       output = base64.b64decode(output)
     except:
