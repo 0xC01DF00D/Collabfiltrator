@@ -187,8 +187,11 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
                 dnsQuery = self._helpers.base64Decode(check[i].getProperty('raw_query'))
                 preambleOffset = int(dnsQuery[12])
                 dnsOffset = int(dnsQuery[17])
-                subdomain = ''.join(chr (x) for x in dnsQuery[18:(18+dnsOffset)])
-                chunk = ''.join(chr (x) for x in dnsQuery[13:(13+preambleOffset)])
+                try:  # chr fails when its arg is not in range, negative numbers
+                  subdomain = ''.join(chr (x) for x in dnsQuery[18:(18+dnsOffset)]) # data part
+                  chunk = ''.join(chr (x) for x in dnsQuery[13:(13+preambleOffset)])  # sequence part
+                except:
+                  continue
                 DNSrecordDict[chunk] = subdomain #line up preamble with subdomain containing data
             
             ### Check if input stream is done.
@@ -218,7 +221,10 @@ def showOutput(outputDict):
             for chunk in (sorted(outputDict.items())): #Sort by preamble number to put data in order 
                 completedInputString += chunk[1] # DNSrecordDict.items() returns a tuple so take value from the dict and append it to completedInputString.
     output = completedInputString[:-3].replace('-','=').replace('PLUS','+') # drop EOF marker and replace any - padding with = and fix PLUSes
-    output = base64.b64decode(output)     
+    try:
+      output = base64.b64decode(output)
+    except:
+      return('Invalid base64 data: '+output)
     return output
 
 
