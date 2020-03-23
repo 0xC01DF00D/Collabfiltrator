@@ -89,6 +89,7 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.t1r3.add(self.payloadTxt)
         self.t1r6.add(self.burpCollaboratorDomainTxt) #burp Collab Domain will go here
         self.t1r4.add(swing.JButton("Copy Payload to Clipboard", actionPerformed=self.copyToClipboard))
+        self.t1r4.add(swing.JButton("Clear", actionPerformed=self.clearText))
         self.t1r5.add(swing.JLabel("Output"))
         self.t1r5.add(self.outputScroll) #add output scroll bar to page
         self.t1r7.add(self.progressBar)
@@ -163,6 +164,11 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         clipboard.setContents(data, None)
         return    
 
+    # clear payload & output
+    def clearText(self, event):
+      self.outputTxt.setText('')
+      self.payloadTxt.setText('')
+
     #monitor collab domain for output response
     def checkCollabDomainStatus(self, domain, objCollab):
         DNSrecordDict = dict()#since data comes in out of order we have to line up each request with it's timestamp
@@ -211,7 +217,7 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.outputTxt.append(output + "\n") #print output to payload box
         print('='*80 + '\n' + 'Command: ' + str(self.commandTxt.getText()) + '\n' + output + '\n' + '='*80)
         self.outputTxt.setCaretPosition(self.outputTxt.getDocument().getLength()) # make sure scrollbar is pointing to bottom
-        self.payloadTxt.setText("") #clear out payload box because listener has stopped     
+        #self.payloadTxt.setText("") #clear out payload box because listener has stopped
         return
 
 
