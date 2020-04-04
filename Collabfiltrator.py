@@ -1,3 +1,11 @@
+'''
+TODO
+encrypt DNS exfil (PKI attacker holds private key, deploys public key to victim)
+select several DNS exfil vectors (nslookup, dig, host, ping, wget, curl, python, perl, scp, sftp, ftp, ssh, telnet, rsh, nc, ruby)(certutil, wget, bitsadmin?, python, perl, ftp, sftp, smb, ruby, net use)
+
+Ideas 4/3/2020 
+'''
+
 #Import Burp Objects
 from burp import IBurpExtender, IBurpExtenderCallbacks, ITab, IBurpCollaboratorInteraction
 #Import Java GUI Objects
