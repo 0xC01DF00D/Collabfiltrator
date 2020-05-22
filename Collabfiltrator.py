@@ -213,7 +213,7 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.progressBar.setIndeterminate(False) #turn off progressbar
 
         output = showOutput(DNSrecordDict)
-        self.outputTxt.append(output + "\n") #print output to payload box
+        self.outputTxt.append(self.commandTxt.getText() + " ::\n" + output + "\n\n") #print output to payload box
         self.outputTxt.setCaretPosition(self.outputTxt.getDocument().getLength()) # make sure scrollbar is pointing to bottom
         self.payloadTxt.setText("") #clear out payload box because listener has stopped     
         return
