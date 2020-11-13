@@ -1,8 +1,7 @@
 # Collabfiltrator
 Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
-#### Version:
-2.0
+#### Version: 2.0
 
 #### Authors:
 - <a href="https://twitter.com/adam_logue">Adam Logue</a>
