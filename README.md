@@ -9,6 +9,8 @@ Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 - <a href="https://twitter.com/ninjastyle82">Frank Scarpella</a>
 - <a href="https://twitter.com/phurtim">Ryan Griffin</a>
 
+#### Download Collabfiltrator from the <a href="https://portswigger.net/bappstore/fff2b36e392f49afbeb363403c07c6b8">Burp Suite BApp Store</a>
+
 #### Requirements:
 - Burp Suite Professional 1.7.x or Later
 - <a href="https://www.jython.org/download.html">Jython 2.7.1</a>
@@ -18,7 +20,7 @@ Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
 [Blog Post](https://www.adamlogue.com/turning-blind-rce-into-good-rce-via-dns-exfiltration-using-collabfiltrator-burp-plugin/)
 
-#### Currently Supported Platforms:
+#### Currently Supported Payload Platforms:
 
 - Windows
 - Linux
@@ -39,6 +41,8 @@ Paypal: paypal.me/logueadam
 
 ### To Do:
 - Add Encryption
+- Add HTTP/HTTPS support
+- Add Choice of Exfil Bins (curl, wget, nslookup, dig, powershell, certutil, nc, ftp, etc.)
 
 ### Change Log:
 2.0:
