@@ -20,7 +20,7 @@ Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
 [Blog Post](https://www.adamlogue.com/turning-blind-rce-into-good-rce-via-dns-exfiltration-using-collabfiltrator-burp-plugin/)
 
-#### Currently Supported Payload Platforms:
+#### Supported Targets:
 
 - Windows
 - Linux
