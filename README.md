@@ -1,7 +1,7 @@
 # Collabfiltrator
 Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
-#### Version: 2.0
+#### Version: 2.1
 
 #### Authors:
 - <a href="https://twitter.com/adam_logue">Adam Logue</a>
@@ -13,7 +13,7 @@ Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
 #### Requirements:
 - Burp Suite Professional 1.7.x or Later
-- <a href="https://www.jython.org/download.html">Jython 2.7.1</a>
+- <a href="https://www.jython.org/download.html">Jython 2.7.2</a>
 
 #### Support:
 [Installation in Burp Suite Professional](https://github.com/0xC01DF00D/Collabfiltrator/wiki/Installation-in-Burp-Suite-Professional)
@@ -22,15 +22,15 @@ Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
 #### Supported Targets:
 
-- Windows
-- Linux
+- Windows (powershell)
+- Linux (sh + ping)
 
 #### Usage:
 
 Select a platform from the dropdown menu, enter the desired command, and press `Execute`. A payload will be generated for the platform you choose. Select `Copy Payload to Clipboard`, run the generated payload on your target, and wait for results to appear in the output window
 
-<img src="https://i.imgur.com/2Ry89T8.png">
-<img src="https://i.imgur.com/ODlN4Zj.png">
+<img src="https://i.imgur.com/iOAai5b.png">
+<img src="https://i.imgur.com/3iGQpOS.png">
 
 If you liked this plugin, please consider donating:
 ```
@@ -39,12 +39,19 @@ ETH: 0x847487DBcC6eC9b681a736BE763aca3cB8Debe49
 Paypal: paypal.me/logueadam
 ```
 
-### To Do:
-- Add Encryption
-- Add HTTP/HTTPS support
-- Add Choice of Exfil Bins (curl, wget, nslookup, dig, powershell, certutil, nc, ftp, etc.)
+### Potential Ideas:
+- Add Encryption?
+- Add HTTP/HTTPS exfil support?
+- More Choices of Exfil Bins (curl, wget, nslookup, dig, powershell, certutil, nc, ftp, etc.)
 
 ### Change Log:
+2.1:
+- Replaced the Linux exfil method with the enhanced Linux ping exfil command from [mr-mosi's fork](https://github.com/mr-mosi/Collabfiltrator). This payload been modified to work on systems running busybox and old sh shells.
+- Added Dark Mode Compatibility.
+- Fixed IDN 2008 error when hosts don't support punycode domains by setting "="" from "-"" to "EQLS".
+- Added Burp 2021 GUI Compatibility so it doesn't look terrible.
+- Added command output history to Extender tab.
+
 2.0:
 - Fixed dangling threads when unloading extension.
 - Fixed dangling threads when execute button is pressed multiple times.
