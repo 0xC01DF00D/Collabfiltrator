@@ -1,7 +1,7 @@
 # Collabfiltrator
 Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
-#### Version: 2.1
+#### Version: 2.2
 
 #### Authors:
 - <a href="https://twitter.com/adam_logue">Adam Logue</a>
@@ -45,6 +45,9 @@ Paypal: paypal.me/logueadam
 - More Choices of Exfil Bins (curl, wget, nslookup, dig, powershell, certutil, nc, ftp, etc.)
 
 ### Change Log:
+2.2:
+- Fixed Burp 2024 issues with output not displaying.
+
 2.1:
 - Replaced the Linux exfil method with the enhanced Linux ping exfil command from [mr-mosi's fork](https://github.com/mr-mosi/Collabfiltrator). This payload been modified to work on systems running busybox and old sh shells.
 - Added Dark Mode Compatibility.
