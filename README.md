@@ -1,7 +1,8 @@
-# Collabfiltrator
-Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 
-#### Version: 2.2
+# Collabfiltrator
+Exfiltrate blind Remote Code Execution and SQL injection output over DNS via Burp Collaborator.
+
+#### Version: 4.0
 
 #### Authors:
 - <a href="https://twitter.com/adam_logue">Adam Logue</a>
@@ -9,28 +10,48 @@ Exfiltrate blind remote code execution output over DNS via Burp Collaborator.
 - <a href="https://twitter.com/ninjastyle82">Frank Scarpella</a>
 - <a href="https://twitter.com/phurtim">Ryan Griffin</a>
 
-#### Download Collabfiltrator from the <a href="https://portswigger.net/bappstore/fff2b36e392f49afbeb363403c07c6b8">Burp Suite BApp Store</a>
+#### AI Authors:
+- Claude 3.5 Sonnet
+- ChatGPT 4o
 
 #### Requirements:
-- Burp Suite Professional 1.7.x or Later
-- <a href="https://www.jython.org/download.html">Jython 2.7.2</a>
+- Burp Suite Professional 2024.11.2 or Later
 
 #### Support:
+[Building from Source](https://github.com/0xC01DF00D/Collabfiltrator/wiki/Building-from-Source)
+
 [Installation in Burp Suite Professional](https://github.com/0xC01DF00D/Collabfiltrator/wiki/Installation-in-Burp-Suite-Professional)
 
-[Blog Post](https://www.adamlogue.com/turning-blind-rce-into-good-rce-via-dns-exfiltration-using-collabfiltrator-burp-plugin/)
+[Original Blog Post](https://www.adamlogue.com/turning-blind-rce-into-good-rce-via-dns-exfiltration-using-collabfiltrator-burp-plugin/)
 
-#### Supported Targets:
+#### Supported RCE Targets:
 
-- Windows (powershell)
+- Windows (Powershell)
 - Linux (sh + ping)
+- Linux (sh + nslookup)
+- Linux (bash + ping)
+- Linux (bash + nslookup)
 
-#### Usage:
+#### Supported SQLi Targets:
+- Microsoft SQL Server (Stacked Queries)
+- MySQL (Windows)
+- PostgreSQL (Elevated Privileges)
+- Oracle (Elevated Privileges)
+- Oracle (XML External Entities)
 
-Select a platform from the dropdown menu, enter the desired command, and press `Execute`. A payload will be generated for the platform you choose. Select `Copy Payload to Clipboard`, run the generated payload on your target, and wait for results to appear in the output window
+#### RCE Exfiltration Usage:
 
-<img src="https://i.imgur.com/iOAai5b.png">
-<img src="https://i.imgur.com/3iGQpOS.png">
+Select a platform from the dropdown menu, enter the desired command, and press `Execute`. A payload will be generated for the platform you choose. Select `Copy Payload to Clipboard`, run the generated payload on your target, and wait for results to appear in the output window.
+
+<img src="https://i.imgur.com/CimnIGx.png">
+<img src="https://i.imgur.com/jRX1jCI.png">
+
+#### SQLi Exfiltration Usage:
+
+Select a DBMS from the dropdown menu, select an extraction query from the dropdown menu, choose between hex encoding the output before DNS exfiltration (to preserve special characters, spaces, etc) or performing the exfiltration in plaintext, and press `Dump`. A payload will be generated for the DBMS you choose. Select `Copy Payload to Clipboard`, run the generated payload on your target, and wait for results to appear in the output window. Exfiltrated table and column data will populate in subsequent column and row payloads.
+
+<img src="https://i.imgur.com/55ptOSm.png">
+<img src="https://i.imgur.com/qUVN7Mb.png">
 
 If you liked this plugin, please consider donating:
 ```
@@ -39,12 +60,18 @@ ETH: 0x847487DBcC6eC9b681a736BE763aca3cB8Debe49
 Paypal: paypal.me/logueadam
 ```
 
-### Potential Ideas:
-- Add Encryption?
-- Add HTTP/HTTPS exfil support?
-- More Choices of Exfil Bins (curl, wget, nslookup, dig, powershell, certutil, nc, ftp, etc.)
-
 ### Change Log:
+4.0:
+- Complete rewrite in native Java using Portswigger's Montoya API.
+- Faster than the Legacy Jython Version.
+- Introducing SQLi DNS exfiltration with payload support for Microsoft SQL Server (Stacked Queries), MySQL (Windows), PostgreSQL (Elevated Privileges), Oracle (Elevated Privileges), and Oracle (XXE).
+- New info icon includes a mouseover modal that explains constraints of each payload.
+- Exfiltrated SQLi table and column data automatically populates in subsequent column and row payloads.
+- SQL injection payloads can be modified in the payload box before copying them to the clipboard.
+
+3.0:
+- This version was originally going to contain the SQLi DNS exfiltration functionality. However, it was never released because I decided halfway through the implementation to just rewrite the entire thing in native Java using Portswigger's Montoya API.
+
 2.2:
 - Fixed Burp 2024 issues with output not displaying.
 
