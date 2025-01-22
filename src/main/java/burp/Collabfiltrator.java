@@ -17,7 +17,6 @@ public class Collabfiltrator implements BurpExtension {
     private Logging logging;
     private UserInterface userInterface;
     private CollaboratorClient collaboratorClient;
-    private CollaboratorPayload collaboratorPayload;
     private Map<String, String> lastExfiltratedTableByDBMS = new HashMap<>();
     private Map<String, String> lastExfiltratedColumnByDBMS = new HashMap<>();
     private RCEPayloadManager rcePayloadManager;
@@ -29,6 +28,10 @@ public class Collabfiltrator implements BurpExtension {
     private JPanel mainPanel;
     private RCEPanel rcePanel;
     private SQLiPanel sqliPanel;
+
+    public Collabfiltrator() {
+        this.collaboratorClient = null; // Will be initialized in initialize()
+    }
 
     @Override
     public void initialize(MontoyaApi api) {
@@ -91,13 +94,13 @@ public class Collabfiltrator implements BurpExtension {
     }
 
     private void generateNewRCECollaboratorPayload() {
-        this.collaboratorPayload = collaboratorClient.generatePayload();
-        rcePanel.getRceBurpCollaboratorDomainTxt().setText(collaboratorPayload.toString());
+        CollaboratorPayload payload = collaboratorClient.generatePayload();
+        rcePanel.getRceBurpCollaboratorDomainTxt().setText(payload.toString());
     }
 
     private void generateNewSQLiCollaboratorPayload() {
-        this.collaboratorPayload = collaboratorClient.generatePayload();
-        sqliPanel.getSqliBurpCollaboratorDomainTxt().setText(collaboratorPayload.toString());
+        CollaboratorPayload payload = collaboratorClient.generatePayload();
+        sqliPanel.getSqliBurpCollaboratorDomainTxt().setText(payload.toString());
     }
 
     public void copyToClipboard(String payload) {
@@ -113,32 +116,31 @@ public class Collabfiltrator implements BurpExtension {
     }
 
     public void executeRCEPayload(String command) {
-        generateNewRCECollaboratorPayload();
+        CollaboratorPayload payload = collaboratorClient.generatePayload();
+        rcePanel.getRceBurpCollaboratorDomainTxt().setText(payload.toString());
                 
         rcePanel.getRceProgressBar().setIndeterminate(true);
         rcePanel.getRceStopButton().setVisible(true);
                 
         String osType = (String) rcePanel.getOsComboBox().getSelectedItem();
-        String payload = rcePayloadManager.createPayload(osType, command, collaboratorPayload.toString());
+        String generatedPayload = rcePayloadManager.createPayload(osType, command, payload.toString());
         
-        rcePanel.getRcePayloadTxt().setText(payload);
-        rceMonitoringManager.startMonitoring(collaboratorPayload.toString());
+        rcePanel.getRcePayloadTxt().setText(generatedPayload);
+        rceMonitoringManager.startMonitoring(payload.toString());
     }
 
     public void generateSQLiPayload() {
         String dbms = (String) sqliPanel.getDbmsComboBox().getSelectedItem();
         String extractType = (String) sqliPanel.getExtractComboBox().getSelectedItem();
         boolean hexEncoded = sqliPanel.getHexEncodingToggle().isSelected();
-        String payload;
 
-        // Generate new Collaborator payload
-        generateNewSQLiCollaboratorPayload();
+        CollaboratorPayload payload = collaboratorClient.generatePayload();
+        sqliPanel.getSqliBurpCollaboratorDomainTxt().setText(payload.toString());
+        
+        String generatedPayload = sqliPayloadManager.generatePayload(dbms, extractType, hexEncoded, 
+                                                   payload.toString());
 
-        // Get payload from manager
-        payload = sqliPayloadManager.generatePayload(dbms, extractType, hexEncoded, 
-                                                   collaboratorPayload.toString());
-
-        sqliPanel.getSqlipayloadTxt().setText(payload);
-        sqliMonitoringManager.startMonitoring(collaboratorPayload.toString());
+        sqliPanel.getSqlipayloadTxt().setText(generatedPayload);
+        sqliMonitoringManager.startMonitoring(payload.toString());
     }
 }
