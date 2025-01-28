@@ -1,8 +1,8 @@
 
 # Collabfiltrator
-Exfiltrate blind Remote Code Execution and SQL injection output over DNS via Burp Collaborator.
+Exfiltrate Blind Remote Code Execution and SQL injection output over DNS via Burp Collaborator.
 
-#### Version: 4.0
+#### Version: 4.0.1
 
 #### Authors:
 - <a href="https://twitter.com/adam_logue">Adam Logue</a>
@@ -15,7 +15,7 @@ Exfiltrate blind Remote Code Execution and SQL injection output over DNS via Bur
 - ChatGPT 4o
 
 #### Requirements:
-- Burp Suite Professional 2024.11.2 or Later
+- Burp Suite Professional 2024.12.1 or Later
 
 #### Support:
 [Building from Source](https://github.com/0xC01DF00D/Collabfiltrator/wiki/Building-from-Source)
@@ -41,14 +41,14 @@ Exfiltrate blind Remote Code Execution and SQL injection output over DNS via Bur
 
 #### RCE Exfiltration Usage:
 
-Select a platform from the dropdown menu, enter the desired command, and press `Execute`. A payload will be generated for the platform you choose. Select `Copy Payload to Clipboard`, run the generated payload on your target, and wait for results to appear in the output window.
+Select a platform from the dropdown menu, enter the desired command, and press `Execute`. A payload will be generated for the chosen platform. Select `Copy Payload to Clipboard`, execute the generated payload on your target, and wait for results to appear in the output window.
 
 <img src="https://i.imgur.com/CimnIGx.png">
 <img src="https://i.imgur.com/jRX1jCI.png">
 
 #### SQLi Exfiltration Usage:
 
-Select a DBMS from the dropdown menu, select an extraction query from the dropdown menu, choose between hex encoding the output before DNS exfiltration (to preserve special characters, spaces, etc) or performing the exfiltration in plaintext, and press `Dump`. A payload will be generated for the DBMS you choose. Select `Copy Payload to Clipboard`, run the generated payload on your target, and wait for results to appear in the output window. Exfiltrated table and column data will populate in subsequent column and row payloads.
+Select a DBMS and extraction query type from the dropdown menu. Toggle between hex encoding output during DNS exfiltration (to preserve special characters, spaces, etc) or plaintext exfiltration, and press `Dump`. A payload will be generated for the chosen DBMS. Select `Copy Payload to Clipboard`, run the generated SQL query on your target, and wait for results to appear in the output window. Extracted "table" and "column" data will populate in subsequent "column" and "row" payloads.
 
 <img src="https://i.imgur.com/55ptOSm.png">
 <img src="https://i.imgur.com/qUVN7Mb.png">
@@ -61,6 +61,16 @@ Paypal: paypal.me/logueadam
 ```
 
 ### Change Log:
+4.0.1:
+- Merged the RCEMonitoringManager and SQLiMonitoringManager into a unified MonitoringManager that uses a single monitoring thread.
+- Stop buttons no longer stop both RCE and SQLi monitoring threads simultaneously allowing simultaneous usage of RCE and SQLi exfiltration.
+- Logging is now entirely performed through the Burp Montoya logging interface.
+- Microsoft SQL Server Queries have been optimized for speed across large databases and no longer default to the 'master' table.
+- Logging through the Burp Montoya logging interface in the "Extensions" tab now show raw DNS queries in a pretty "xxd" hex format.
+- Monitoring Manager logic has been improved to filter out additional garbage DNS queries sent by databases, such as DNS queries containing only underscores.
+- Improved logging in Burp Montoya logging interface.
+- Improved README.md and pom.xml
+
 4.0:
 - Complete rewrite in native Java using Portswigger's Montoya API.
 - Faster than the Legacy Jython Version.
@@ -68,6 +78,7 @@ Paypal: paypal.me/logueadam
 - New info icon includes a mouseover modal that explains constraints of each payload.
 - Exfiltrated SQLi table and column data automatically populates in subsequent column and row payloads.
 - SQL injection payloads can be modified in the payload box before copying them to the clipboard.
+- Ditched base64 encoding in favor of hex encoding.
 
 3.0:
 - This version was originally going to contain the SQLi DNS exfiltration functionality. However, it was never released because I decided halfway through the implementation to just rewrite the entire thing in native Java using Portswigger's Montoya API.

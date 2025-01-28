@@ -4,20 +4,22 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.adamlogue.collabfiltrator</groupId>
     <artifactId>Collabfiltrator</artifactId>
-    <version>4.0</version>
+    <version>4.0.1</version>
     <packaging>jar</packaging>
     <name>Collabfiltrator</name>
     <description>Exfiltrate Blind RCE and SQLi output over DNS via Burp Collaborator.</description>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <montoya.api.version>[2024.1,)</montoya.api.version>
     </properties>
     <dependencies>
         <!-- Montoya API Dependency -->
         <dependency>
-            <groupId>net.portswigger.burp</groupId>
+            <groupId>net.portswigger.burp.extensions</groupId>
             <artifactId>montoya-api</artifactId>
-            <version>2024.7</version>
+            <version>${montoya.api.version}</version>
+            <scope>provided</scope>
         </dependency>
         <!-- Google Guava Dependency -->
         <dependency>
@@ -27,7 +29,7 @@
         </dependency>
     </dependencies>
     <build>
-        <finalName>Collabfiltrator-4.0</finalName>
+        <finalName>Collabfiltrator</finalName>
         <plugins>
             <!-- Maven Compiler Plugin -->
             <plugin>

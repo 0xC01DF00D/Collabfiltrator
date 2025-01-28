@@ -142,10 +142,7 @@ public class SQLiPanel extends JPanel {
         });
 
         sqliStopButton.addActionListener(e -> {
-            mainExtension.stopMonitoringAction();
-            sqliStopButton.setVisible(false);
-            generateSQLiButton.setVisible(true);
-            sqliProgressBar.setIndeterminate(false);
+            mainExtension.stopSQLiMonitoring();
         });
 
         // Add components to panel
@@ -338,6 +335,7 @@ public class SQLiPanel extends JPanel {
         return "⦿  Uses xp_dirtree for DNS exfiltration\n\n" +
             "⦿  Does not work with Azure SQL databases\n\n" +
             "⦿  Requires stacked query injection\n\n" +
+            "⦿  XP_DIRTREE queries sometimes take >= 30 seconds to complete\n\n" +
             "⦿  Works with hex-encoded and plaintext data\n\n" +
             "⦿  Extracts data using master..xp_dirtree\n\n" +
             "⦿  Hex encoding data preserves case sensitivity\n\n" +

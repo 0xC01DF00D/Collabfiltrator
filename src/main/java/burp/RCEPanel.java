@@ -124,9 +124,7 @@ public class RCEPanel extends JPanel {
         });
 
         rceStopButton.addActionListener(e -> {
-            mainExtension.stopMonitoringAction();
-            rceStopButton.setVisible(false);
-            executeButton.setVisible(true);
+            mainExtension.stopRCEMonitoring();
         });
 
         // Add components to panel
